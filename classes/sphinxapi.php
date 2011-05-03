@@ -1,7 +1,7 @@
 <?php
 
 //
-// $Id: sphinxapi.php 2616 2011-01-01 02:33:06Z shodan $
+// $Id: sphinxapi.php 2758 2011-04-04 11:10:44Z kevg $
 //
 
 //
@@ -26,11 +26,10 @@ define ( "SEARCHD_COMMAND_UPDATE",		2 );
 define ( "SEARCHD_COMMAND_KEYWORDS",	3 );
 define ( "SEARCHD_COMMAND_PERSIST",		4 );
 define ( "SEARCHD_COMMAND_STATUS",		5 );
-define ( "SEARCHD_COMMAND_QUERY",		6 );
 define ( "SEARCHD_COMMAND_FLUSHATTRS",	7 );
 
 /// current client-side command implementation versions
-define ( "VER_COMMAND_SEARCH",		0x117 );
+define ( "VER_COMMAND_SEARCH",		0x118 );
 define ( "VER_COMMAND_EXCERPT",		0x103 );
 define ( "VER_COMMAND_UPDATE",		0x102 );
 define ( "VER_COMMAND_KEYWORDS",	0x100 );
@@ -638,7 +637,7 @@ class SphinxClient
 			$left = $len;
 			while ( $left>0 && !feof($fp) )
 			{
-				$chunk = fread ( $fp, $left );
+				$chunk = fread ( $fp, min ( 8192, $left ) );
 				if ( $chunk )
 				{
 					$response .= $chunk;
@@ -1109,8 +1108,8 @@ class SphinxClient
 		// send query, get response
 		$nreqs = count($this->_reqs);
 		$req = join ( "", $this->_reqs );
-		$len = 4+strlen($req);
-		$req = pack ( "nnNN", SEARCHD_COMMAND_SEARCH, VER_COMMAND_SEARCH, $len, $nreqs ) . $req; // add header
+		$len = 8+strlen($req);
+		$req = pack ( "nnNNN", SEARCHD_COMMAND_SEARCH, VER_COMMAND_SEARCH, $len, 0, $nreqs ) . $req; // add header
 
 		if ( !( $this->_Send ( $fp, $req, $len+8 ) ) ||
 			 !( $response = $this->_GetResponse ( $fp, VER_COMMAND_SEARCH ) ) )
@@ -1688,5 +1687,5 @@ class SphinxClient
 }
 
 //
-// $Id: sphinxapi.php 2616 2011-01-01 02:33:06Z shodan $
+// $Id: sphinxapi.php 2758 2011-04-04 11:10:44Z kevg $
 //
