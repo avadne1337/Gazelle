@@ -65,9 +65,10 @@ class TEXT_2 {
 
 		//Inline links
 		$URLPrefix = '(\[url\]|\[url\=|\[img\=|\[img\])';
-		$Str = preg_replace('/'.$URLPrefix.'\s+/i', '$1', $Str);
+		$Str = preg_replace('/'.$URLPrefix.'\s+http/i', '$1http', $Str);
 		$Str = preg_replace('/(?<!'.$URLPrefix.')http(s)?:\/\//i', '$1[inlineurl]http$2://', $Str);
 		// For anonym.to and archive.org links, remove any [inlineurl] in the middle of the link
+		$Str = strtr($Str, array('?[inlineurl]http'=>'?http', '=[inlineurl]http'=>'=http')); 
 		$callback = create_function('$matches', 'return str_replace("[inlineurl]","",$matches[0]);');
 		$Str = preg_replace_callback('/(?<=\[inlineurl\]|'.$URLPrefix.')(\S*\[inlineurl\]\S*)/m', $callback, $Str);
 
@@ -156,14 +157,14 @@ This is all done in a loop.
 
 EXPLANATION OF PARSER LOGIC
 
-1) Find the next tag (regex)
-	1a) If there aren't any tags left, write everything remaining to a block and return (done parsing)
-	1b) If the next tag isn't where the pointer is, write everything up to there to a text block.
-2) See if it's a [[wiki-link]] or an ordinary tag, and get the tag name
-3) If it's not a wiki link:
-	3a) check it against the $this->ValidTags array to see if it's actually a tag and not [bullshit]
-		If it's [not a tag], just leave it as plaintext and move on
-	3b) Get the attribute, if it exists [name=attribute]
+1) Find and parse the next tag (regex)
+	1a) See if it's a [[wiki-link]] or an ordinary tag, and get the tag name
+	1b) If it's not a wiki link:
+		1bi) check it against the $this->ValidTags array to see if it's actually a tag and not [bullshit]
+		1bii) Get the attribute, if it exists [name=attribute]
+			If it's [not a tag] or has an invalid attribute, just leave it as plaintext and move on
+2) If there aren't any tags left, write everything remaining to a block and return (done parsing)
+3) If the next tag isn't where the pointer is, write everything up to there to a text block.
 4) Move the pointer past the end of the tag
 5) Find out where the tag closes (beginning of [/tag])
 	5a) Different for different types of tag. Some tags don't close, others are weird like [*]
@@ -194,55 +195,77 @@ EXPLANATION OF PARSER LOGIC
 		while($i<$Len) {
 			$Block = '';
 			
-			// 1) Find the next tag (regex)
+			// 1) Find and parse the next tag (regex)
 			// [name=|[name]|[[wiki-link]]
 			$IsTag = preg_match("/((\[[a-zA-Z*]{1,100})([=\]]))|(\[\[[^\n\"'\[\]]+\]\])/", $Str, $Tag, PREG_OFFSET_CAPTURE, $i);
-
-			// 1a) If there aren't any tags left, write everything remaining to a block
-			if(!$IsTag) {
-				// No more tags
-				$Array[$ArrayPos] = substr($Str, $i);
-				break;
-			}
-			
-			// 1b) If the next tag isn't where the pointer is, write everything up to there to a text block.
 			$TagPos = $Tag[0][1];
-			if($TagPos>$i) {
-				$Array[$ArrayPos] = substr($Str, $i, $TagPos-$i);
-				++$ArrayPos;
-				$i=$TagPos;
-			}
-			
-			// 2) See if it's a [[wiki-link]] or an ordinary tag, and get the tag name
-			if(!empty($Tag[4][0])) { // Wiki-link
+			// At this point we still don't know whether the tag code is valid
+			// $IsTag will be updated with new information
+
+			// 1a) See if it's a [[wiki-link]] or an ordinary tag, and get the tag name
+			if ($IsTag && !empty($Tag[4][0])) { // Wiki-link
 				$WikiLink = true;
 				$TagName = substr($Tag[4][0], 2, -2);
 				$Attrib = '';
 				$ExtraTagLen = 0;
-			} else { // 3) If it's not a wiki link:
+			} elseif ($IsTag) { // 1b) If it's not a wiki link:
 				$WikiLink = false;
 				$TagName = strtolower(substr($Tag[2][0], 1));
 				
-				//3a) check it against the $this->ValidTags array to see if it's actually a tag and not [bullshit]
+				$MaxAttribs = $this->ValidTags[$TagName];
+				
+				// 1bi) check it against the $this->ValidTags array to see if it's actually a tag and not [bullshit]
 				if(!isset($this->ValidTags[$TagName])) {
+					$IsTag = 0;
+				}
+
+				// 1bii) Get the attribute, if it exists [name=attribute]
+				$HasAttrib = ($Tag[3][0] == '=');
+				if ($IsTag && $HasAttrib) {
+					$AttribFrom = $TagPos + strlen($Tag[0][0]);
+					$Attrib = substr($Str, $AttribFrom, strpos($Str, ']', $AttribFrom) - $AttribFrom);
+					$ExtraTagLen = strlen($Attrib) + 1;
+					// check $Attrib is valid, i.e. the tag is in a valid format
+					// disallowed characters
+					if ((strpos($Attrib, "\n") !== false)
+							|| (strpos($Attrib, "'") !== false)
+							|| (strpos($Attrib, "\"") !== false)) {
+						$IsTag = 0;
+					} elseif (strpos($Attrib, "[") !== false) {
+						// attributes aren't allowed to contain any tag (or something which looks like it might be one) inside them
+						foreach ($this->ValidTags as $PossibleTag=>$_) {
+							if (strpos($Attrib, "[".$PossibleTag) !== false) {
+								$IsTag = 0;
+							}
+						}
+					}
+				} else {
+					$Attrib = '';
+					$ExtraTagLen = 0;
+				}
+
+				if (!$IsTag) {
+					// we jump past the beginning of the "tag", but not the attribute value, as this may contain real tags
 					$Array[$ArrayPos] = substr($Str, $i, ($TagPos-$i)+strlen($Tag[0][0]));
 					$i=$TagPos+strlen($Tag[0][0]);
 					++$ArrayPos;
 					continue;
 				}
 				
-				$MaxAttribs = $this->ValidTags[$TagName];
-				
-				// 3b) Get the attribute, if it exists [name=attribute]
-				$HasAttrib = ($Tag[3][0] == '=');
-				if($HasAttrib) {
-					$AttribFrom = $TagPos + strlen($Tag[0][0]);
-					$Attrib = substr($Str, $AttribFrom, strpos($Str, ']', $AttribFrom) - $AttribFrom);
-					$ExtraTagLen = strlen($Attrib) + 1;
-				} else {
-					$Attrib = '';
-					$ExtraTagLen = 0;
-				}
+			}
+			
+			// 2) If there aren't any tags left, write everything remaining to a block
+			if(!$IsTag) {
+				// No more tags
+				$Array[$ArrayPos] = substr($Str, $i);
+				break;
+			}
+			
+			// 3) If the next tag isn't where the pointer is, write everything up to there to a text block.
+			if($TagPos>$i) {
+				$Array[$ArrayPos] = substr($Str, $i, $TagPos-$i);
+				++$ArrayPos;
+				$i=$TagPos;
 			}
 			
 			// 4) Move the pointer past the end of the tag
