@@ -190,7 +190,7 @@ EXPLANATION OF PARSER LOGIC
 		$Len = strlen($Str);
 		$Array = array();
 		$ArrayPos = 0;
-		
+
 		while($i<$Len) {
 			$Block = '';
 			
