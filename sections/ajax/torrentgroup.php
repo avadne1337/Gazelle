@@ -9,12 +9,33 @@ $GroupAllowed = array('WikiBody', 'WikiImage', 'ID', 'Name', 'Year', 'RecordLabe
 $TorrentAllowed = array('ID', 'Media', 'Format', 'Encoding', 'Remastered', 'RemasterYear', 'RemasterTitle', 'RemasterRecordLabel', 'RemasterCatalogueNumber', 'Scene', 'HasLog', 'HasCue', 'LogScore', 'FileCount', 'Size', 'Seeders', 'Leechers', 'Snatched', 'FreeTorrent', 'Time', 'Description', 'FileList', 'FilePath', 'UserID', 'Username');
 
 $GroupID = (int)$_GET['id'];
+$TorrentHash = (string)$_GET['hash'];
 
-if ($GroupID == 0) {
-	error('bad id parameter', true);
+if ($GroupID && $TorrentHash) {
+    json_die("failure", "bad parameters");
 }
 
-$TorrentCache = get_group_info($GroupID, true, 0);
+if ($TorrentHash) {
+    if (!is_valid_torrenthash($TorrentHash)) {
+        json_die("failure", "bad hash parameter");
+    } else {
+        $GroupID = (int)torrenthash_to_groupid($TorrentHash);
+        if (!$GroupID){
+            json_die("failure", "bad hash parameter");
+        }
+    }
+}
+
+if ($GroupID <= 0) {
+    json_die("failure", "bad id parameter");
+}
+
+$TorrentCache = get_group_info($GroupID, true, 0, true, true);
+
+if (!$TorrentCache) {
+    json_die("failure", "bad id parameter");
+}
+
 list($TorrentDetails, $TorrentList) = $TorrentCache;
 
 $ArtistForm = Artists::get_artist($GroupID);
@@ -94,4 +115,4 @@ foreach ($TorrentList as $Torrent) {
 	);
 }
 
-print json_encode(array('status' => 'success', 'response' => array('group' => $JsonTorrentDetails, 'torrents' => $JsonTorrentList)));
+json_die("success", array('group' => $JsonTorrentDetails, 'torrents' => $JsonTorrentList));
