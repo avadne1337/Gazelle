@@ -13,6 +13,7 @@ if ($CategoryID == 0 && $UserID != $LoggedUser['ID'] && !check_perms('site_colla
 	error(403);
 }
 
+
 $GroupID = $_POST['groupid'];
 if (!is_number($GroupID)) {
 	error(404);
