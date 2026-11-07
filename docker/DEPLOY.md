@@ -14,7 +14,12 @@ Running on `claude@192.168.1.111` (Debian 13, arm64) under `/home/claude/gazelle
 | php        | built from docker/php         | PHP 7.4-fpm + gd, mysqli, mbstring, bcmath, sockets, zip, **mcrypt**, **memcache** |
 | db         | mariadb:10.11                 | MySQL-compatible DB (strict mode off)   |
 | memcached  | memcached:1.6-alpine          | Cache (TCP 11211, capped at 64 MB)      |
-| sphinx     | manticoresearch/manticore     | Optional search backend (profile `search`) |
+| ocelot     | built from docker/ocelot      | BitTorrent tracker daemon, port 2710    |
+| sphinx     | manticoresearch/manticore     | Search backend (profile `search`), SphinxQL on 9306 |
+
+All six run together on ~335 MB RAM. The `sphinx` service is behind the `search`
+compose profile, so start the full stack with:
+`docker compose --profile search up -d`
 
 ### Why these choices
 - **PHP 7.4** (not 5.x): newest arm64 PHP image whose core still works with this
@@ -73,12 +78,34 @@ SysOp-only dev tools or internal helpers. Changes made:
 > `docker compose restart nginx` / rebuild php, not just reload. The app code is
 > a *directory* mount (`.:/var/www/gazelle`), so `.php` edits go live immediately.
 
-## Not yet set up (follow-ups)
-- **Search**: `browse`/search pages use Sphinx/Manticore. Start it with
-  `docker compose --profile search up -d`, but the `torrents` index still needs to
-  be built from the DB — `sphinx.conf` must be translated to Manticore syntax first.
-- **Tracker (Ocelot)**: the C++ announce daemon isn't deployed, so torrents won't
-  announce. The website itself is fully functional without it.
-- **Cron jobs**: `schedule.php`, `peerupdate.php` and the Sphinx indexer (see
-  `docs/INSTALL.txt`) are not scheduled.
+## Tracker (Ocelot)
+Built from the bundled `ocelot-1.0.tar.gz` (Debian + Boost/libev/MySQL++/tcmalloc;
+the autotools macros needed `--with-*-lib` pointed at the multiarch dir and the
+`libmariadb-dev-compat` package). `ocelot.conf` is rendered from env at startup
+(docker/ocelot/entrypoint.sh); it shares the DB and the `TRACKER_SECRET` /
+`TRACKER_REPORTKEY` with Gazelle. Verified: it loads users from the DB, listens on
+2710, and validates passkeys (`Passkey not found` for an unknown one). The client
+whitelist is empty, which Ocelot reads as "allow all clients".
+
+## Search (Manticore)
+`docker/sphinx/manticore.conf.tpl` is adapted from `sphinx.conf`; the entrypoint
+renders DB creds, builds the `torrents` and `requests` indexes from MariaDB, then
+runs `searchd` (SphinxQL on 9306). Two adaptations were needed for Manticore 6:
+- **`year` is a reserved attribute name** → renamed the sphinx attribute to
+  `groupyear` in the config and in Gazelle's search layer
+  (`classes/torrentsearch.class.php`, `sections/requests/requests.php`,
+  `sections/ajax/requests.php`).
+- Search now queries the **main indexes only** (dropped the `delta` indexes from
+  the `FROM` clause) — the delta/real-time path is replaced by periodic full
+  reindexing.
+Verified end to end: torrent + request searches (incl. year and tag filters)
+execute cleanly against Manticore (0 results on the empty DB, no errors).
+
+## Remaining follow-ups
+- **Search index refresh**: a cron job should run
+  `docker compose exec sphinx indexer --config /etc/manticoresearch/manticore.conf --all --rotate`
+  periodically so newly uploaded torrents become searchable (the index is also
+  rebuilt whenever the `sphinx` container restarts).
+- **Cron jobs**: `schedule.php` and `peerupdate.php` (see `docs/INSTALL.txt`) are
+  not scheduled.
 - **TLS**: HTTP only. Put a reverse proxy / certs in front if you need HTTPS.

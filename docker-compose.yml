@@ -64,17 +64,27 @@ services:
     ports:
       - "2710:2710"
 
-  # Optional search backend (Manticore speaks the SphinxQL protocol Gazelle uses).
+  # Search backend (Manticore speaks the SphinxQL protocol Gazelle uses).
+  # Config is adapted from sphinx.conf; indexes are built from MariaDB on start.
   sphinx:
     image: manticoresearch/manticore:6.3.6
     restart: unless-stopped
     profiles: ["search"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      GAZELLE_DB_USER: "${GAZELLE_DB_USER}"
+      GAZELLE_DB_PASSWORD: "${GAZELLE_DB_PASSWORD}"
+    entrypoint: ["/bin/bash", "/docker-entrypoint-gazelle.sh"]
     ulimits:
       nofile:
         soft: 65536
         hard: 65536
     volumes:
       - sphinx_data:/var/lib/manticore
+      - ./docker/sphinx/manticore.conf.tpl:/etc/manticoresearch/manticore.conf.tpl:ro
+      - ./docker/sphinx/entrypoint.sh:/docker-entrypoint-gazelle.sh:ro
 
 volumes:
   db_data:
