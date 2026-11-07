@@ -1,0 +1,81 @@
+services:
+  db:
+    image: mariadb:10.11
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: "${MARIADB_ROOT_PASSWORD}"
+      # Consumed by docker/mariadb/initdb/02-grants.sh on first init.
+      GAZELLE_DB_USER: "${GAZELLE_DB_USER}"
+      GAZELLE_DB_PASSWORD: "${GAZELLE_DB_PASSWORD}"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./docker/mariadb/my.cnf:/etc/mysql/conf.d/gazelle.cnf:ro
+      # Schema (creates the `gazelle` database) runs first, then the app user.
+      - ./gazelle.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./docker/mariadb/initdb/02-grants.sh:/docker-entrypoint-initdb.d/02-grants.sh:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+
+  memcached:
+    image: memcached:1.6-alpine
+    restart: unless-stopped
+    command: ["-m", "64"]
+
+  php:
+    build: ./docker/php
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      memcached:
+        condition: service_started
+    volumes:
+      - .:/var/www/gazelle
+
+  nginx:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    depends_on:
+      - php
+    ports:
+      - "80:80"
+    volumes:
+      - .:/var/www/gazelle:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+
+  # Ocelot: the BitTorrent tracker daemon (announce/scrape + Gazelle sync).
+  ocelot:
+    build: ./docker/ocelot
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: db
+      MYSQL_DB: gazelle
+      MYSQL_USER: "${GAZELLE_DB_USER}"
+      MYSQL_PASSWORD: "${GAZELLE_DB_PASSWORD}"
+      TRACKER_SECRET: "${TRACKER_SECRET}"
+      TRACKER_REPORTKEY: "${TRACKER_REPORTKEY}"
+    ports:
+      - "2710:2710"
+
+  # Optional search backend (Manticore speaks the SphinxQL protocol Gazelle uses).
+  sphinx:
+    image: manticoresearch/manticore:6.3.6
+    restart: unless-stopped
+    profiles: ["search"]
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - sphinx_data:/var/lib/manticore
+
+volumes:
+  db_data:
+  sphinx_data:

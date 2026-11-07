@@ -1,4 +1,5 @@
 config.php
+.env
 release/*
 static/similar
 static/stylespreview
