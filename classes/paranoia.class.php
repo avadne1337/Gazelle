@@ -51,7 +51,7 @@ function check_paranoia($Property, $Paranoia, $UserClass, $UserID = false) {
 		return false;
 	}
 	if (!is_array($Paranoia)) {
-		$Paranoia = unserialize($Paranoia);
+		$Paranoia = unserialize($Paranoia, ['allowed_classes' => false]);
 	}
 	if (!is_array($Paranoia)) {
 		$Paranoia = array();

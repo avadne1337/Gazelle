@@ -285,7 +285,7 @@ else {
 						//TODO: another tracker might enable this for donors, I think it's too stupid to bother adding that
 						// Because we <3 our staff
 						$Permissions = Permissions::get_permissions($PermissionID);
-						$CustomPermissions = unserialize($CustomPermissions);
+						$CustomPermissions = unserialize($CustomPermissions, ['allowed_classes' => false]);
 						if (isset($Permissions['Permissions']['site_disable_ip_history'])
 							|| isset($CustomPermissions['site_disable_ip_history'])
 						) {

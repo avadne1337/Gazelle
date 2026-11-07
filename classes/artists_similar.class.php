@@ -33,9 +33,9 @@ class ARTISTS_SIMILAR extends ARTIST{
 	}
 
 	function load_data($Data) {
-		list($LastUpdated, $this->Name, $this->x, $this->y, $this->Artists, $this->Similar) = unserialize($Data);
-		$this->Artists = unserialize($this->Artists);
-		$this->Similar = unserialize($this->Similar);
+		list($LastUpdated, $this->Name, $this->x, $this->y, $this->Artists, $this->Similar) = unserialize($Data, ['allowed_classes' => false]);
+		$this->Artists = unserialize($this->Artists, ['allowed_classes' => false]);
+		$this->Similar = unserialize($this->Similar, ['allowed_classes' => false]);
 	}
 
 	function set_up() {

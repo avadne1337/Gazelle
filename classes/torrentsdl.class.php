@@ -227,7 +227,7 @@ class TorrentsDL {
 		if (Misc::is_new_torrent($TorrentData)) {
 			return BencodeTorrent::add_announce_url($TorrentData, $AnnounceURL);
 		}
-		$Tor = new TORRENT(unserialize(base64_decode($TorrentData)), true);
+		$Tor = new TORRENT(unserialize(base64_decode($TorrentData), ['allowed_classes' => false]), true);
 		$Tor->set_announce_url($AnnounceURL);
 		unset($Tor->Val['announce-list']);
 		unset($Tor->Val['url-list']);

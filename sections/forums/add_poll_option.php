@@ -26,7 +26,7 @@ if (!$DB->has_results()) {
 }
 
 list($Answers) = $DB->next_record(MYSQLI_NUM, false);
-$Answers = unserialize($Answers);
+$Answers = unserialize($Answers, ['allowed_classes' => false]);
 $Answers[] = $NewOption;
 $Answers = serialize($Answers);
 

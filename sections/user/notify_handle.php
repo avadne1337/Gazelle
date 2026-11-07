@@ -133,7 +133,7 @@ if ($_POST['users'.$FormID]) {
 		WHERE Username IN ('" . implode("', '", $EscapedUsernames) . "')
 			AND ID != $LoggedUser[ID]");
 	while (list($UserID, $Paranoia) = $DB->next_record()) {
-		$Paranoia = unserialize($Paranoia);
+		$Paranoia = unserialize($Paranoia, ['allowed_classes' => false]);
 		if (!in_array('notifications', $Paranoia)) {
 			$Users .= '|' . $UserID . '|';
 			$HasFilter = true;

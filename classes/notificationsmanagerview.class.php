@@ -19,7 +19,7 @@ class NotificationsManagerView {
 
 	private static function render_push_settings() {
 		$PushService = self::$Settings['PushService'];
-		$PushOptions = unserialize(self::$Settings['PushOptions']);
+		$PushOptions = unserialize(self::$Settings['PushOptions'], ['allowed_classes' => false]);
 		if (empty($PushOptions['PushDevice'])) {
 			$PushOptions['PushDevice'] = '';
 		}

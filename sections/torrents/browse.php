@@ -50,7 +50,7 @@ if (!empty($_GET['setdefault'])) {
 		WHERE UserID = '".db_string($LoggedUser['ID'])."'");
 	list($SiteOptions) = $DB->next_record(MYSQLI_NUM, false);
 	if (!empty($SiteOptions)) {
-		$SiteOptions = unserialize($SiteOptions);
+		$SiteOptions = unserialize($SiteOptions, ['allowed_classes' => false]);
 	} else {
 		$SiteOptions = array();
 	}
@@ -70,7 +70,7 @@ if (!empty($_GET['setdefault'])) {
 		FROM users_info
 		WHERE UserID = '".db_string($LoggedUser['ID'])."'");
 	list($SiteOptions) = $DB->next_record(MYSQLI_NUM, false);
-	$SiteOptions = unserialize($SiteOptions);
+	$SiteOptions = unserialize($SiteOptions, ['allowed_classes' => false]);
 	$SiteOptions['DefaultSearch'] = '';
 	$DB->query("
 		UPDATE users_info

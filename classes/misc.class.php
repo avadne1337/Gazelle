@@ -13,7 +13,7 @@ class Misc {
          * @param string $ContentType text/plain or text/html
          */
 
-        public static function send_email($To, $Subject, $Body, $From, $ContentType) {
+        public static function send_email($To, $Subject, $Body, $From, $ContentType = 'text/html') {
 
                 switch (EMAIL_DELIVERY_TYPE) {
                         case 'local':

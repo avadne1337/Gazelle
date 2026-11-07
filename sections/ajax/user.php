@@ -51,7 +51,7 @@ if (!$DB->has_results()) { // If user doesn't exist
 
 list($Username, $Email, $LastAccess, $IP, $Class, $Uploaded, $Downloaded, $RequiredRatio, $Enabled, $Paranoia, $Invites, $CustomTitle, $torrent_pass, $DisableLeech, $JoinDate, $Info, $Avatar, $Donor, $Warned, $ForumPosts, $InviterID, $DisableInvites, $InviterName, $RatioWatchEnds, $RatioWatchDownload) = $DB->next_record(MYSQLI_NUM, array(9, 11));
 
-$Paranoia = unserialize($Paranoia);
+$Paranoia = unserialize($Paranoia, ['allowed_classes' => false]);
 if (!is_array($Paranoia)) {
 	$Paranoia = array();
 }

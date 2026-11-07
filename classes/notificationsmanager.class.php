@@ -639,7 +639,7 @@ class NotificationsManager {
 		return $Results;
 	}
 
-	public static function save_settings($UserID, $Settings) {
+	public static function save_settings($UserID, $Settings = null) {
 		if (!is_array($Settings)) {
 			// A little cheat technique, gets all keys in the $_POST array starting with 'notifications_'
 			$Settings = array_intersect_key($_POST, array_flip(preg_grep('/^notifications_/', array_keys($_POST))));
@@ -733,7 +733,7 @@ class NotificationsManager {
 
 			if (G::$DB->has_results()) {
 				list($PushService, $PushOptions) = G::$DB->next_record(MYSQLI_NUM, false);
-				$PushOptions = unserialize($PushOptions);
+				$PushOptions = unserialize($PushOptions, ['allowed_classes' => false]);
 				switch ($PushService) {
 					case '1':
 						$Service = "NMA";

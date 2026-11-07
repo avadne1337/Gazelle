@@ -53,7 +53,7 @@ if (isset($_POST['action'])) {
 		SET CustomPermissions = '".db_string(serialize($Delta))."'
 		WHERE ID = '$UserID'");
 } elseif (!empty($Customs)) {
-	$Delta = unserialize($Customs);
+	$Delta = unserialize($Customs, ['allowed_classes' => false]);
 }
 
 $Permissions = array_merge($Defaults, $Delta);

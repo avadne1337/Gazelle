@@ -144,7 +144,7 @@ if ($Preview == 1) {
 		$Paranoia = $CustomParanoia;
 	}
 } else {
-	$Paranoia = unserialize($Paranoia);
+	$Paranoia = unserialize($Paranoia, ['allowed_classes' => false]);
 	if (!is_array($Paranoia)) {
 		$Paranoia = array();
 	}

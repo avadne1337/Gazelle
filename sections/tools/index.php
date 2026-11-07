@@ -246,7 +246,7 @@ switch ($_REQUEST['action']) {
 				if (!check_perms('admin_manage_permissions', $Level)) {
 					error(403);
 				}
-				$Values = unserialize($Values);
+				$Values = unserialize($Values, ['allowed_classes' => false]);
 			}
 
 			if (!empty($_POST['submit'])) {

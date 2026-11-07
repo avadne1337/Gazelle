@@ -95,7 +95,7 @@ class Users {
 			} else {
 				$UserInfo = G::$DB->next_record(MYSQLI_ASSOC, array('Paranoia', 'Title'));
 				$UserInfo['CatchupTime'] = strtotime($UserInfo['CatchupTime']);
-				$UserInfo['Paranoia'] = unserialize($UserInfo['Paranoia']);
+				$UserInfo['Paranoia'] = unserialize($UserInfo['Paranoia'], ['allowed_classes' => false]);
 				if ($UserInfo['Paranoia'] === false) {
 					$UserInfo['Paranoia'] = array();
 				}
@@ -178,7 +178,7 @@ class Users {
 			$HeavyInfo = G::$DB->next_record(MYSQLI_ASSOC, array('CustomPermissions', 'SiteOptions'));
 
 			if (!empty($HeavyInfo['CustomPermissions'])) {
-				$HeavyInfo['CustomPermissions'] = unserialize($HeavyInfo['CustomPermissions']);
+				$HeavyInfo['CustomPermissions'] = unserialize($HeavyInfo['CustomPermissions'], ['allowed_classes' => false]);
 			} else {
 				$HeavyInfo['CustomPermissions'] = array();
 			}
@@ -228,7 +228,7 @@ class Users {
 				unset($HeavyInfo['CustomForums']['']);
 			}
 
-			$HeavyInfo['SiteOptions'] = unserialize($HeavyInfo['SiteOptions']);
+			$HeavyInfo['SiteOptions'] = unserialize($HeavyInfo['SiteOptions'], ['allowed_classes' => false]);
 			if (!empty($HeavyInfo['SiteOptions'])) {
 				$HeavyInfo = array_merge($HeavyInfo, $HeavyInfo['SiteOptions']);
 			}
@@ -264,7 +264,7 @@ class Users {
 			FROM users_info
 			WHERE UserID = $UserID");
 		list($SiteOptions) = G::$DB->next_record(MYSQLI_NUM, false);
-		$SiteOptions = unserialize($SiteOptions);
+		$SiteOptions = unserialize($SiteOptions, ['allowed_classes' => false]);
 
 		// Get HeavyInfo
 		$HeavyInfo = Users::user_heavy_info($UserID);
@@ -391,9 +391,9 @@ class Users {
 			return false;
 		}
 		if (Users::is_crypt_hash($Hash)) {
-			return crypt($Password, $Hash) == $Hash;
+			return hash_equals($Hash, crypt($Password, $Hash));
 		} elseif ($Secret) {
-			return Users::make_hash($Password, $Secret) == $Hash;
+			return hash_equals($Hash, Users::make_hash($Password, $Secret));
 		}
 		return false;
 	}

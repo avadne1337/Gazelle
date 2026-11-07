@@ -559,7 +559,7 @@ class Torrents {
 				$Tor = new BencodeTorrent($Contents);
 				$FilePath = (isset($Tor->Dec['info']['files']) ? Format::make_utf8($Tor->get_name()) : '');
 			} else {
-				$Tor = new TORRENT(unserialize(base64_decode($Contents)), true);
+				$Tor = new TORRENT(unserialize(base64_decode($Contents), ['allowed_classes' => false]), true);
 				$FilePath = (isset($Tor->Val['info']->Val['files']) ? Format::make_utf8($Tor->get_name()) : '');
 			}
 			list($TotalSize, $FileList) = $Tor->file_list();

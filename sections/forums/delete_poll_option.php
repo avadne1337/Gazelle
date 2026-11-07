@@ -26,7 +26,7 @@ if (is_number($ThreadID) && is_number($PollOption)) {
 	}
 
 	list($Answers) = $DB->next_record(MYSQLI_NUM, false);
-	$Answers = unserialize($Answers);
+	$Answers = unserialize($Answers, ['allowed_classes' => false]);
 	unset($Answers[$PollOption]);
 	$Answers = serialize($Answers);
 

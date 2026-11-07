@@ -29,7 +29,7 @@ if ($UserID != $LoggedUser['ID'] && !check_perms('users_edit_profiles', $Class))
 	error(403);
 }
 
-$Paranoia = unserialize($Paranoia);
+$Paranoia = unserialize($Paranoia, ['allowed_classes' => false]);
 if (!is_array($Paranoia)) {
 	$Paranoia = array();
 }
@@ -51,7 +51,7 @@ function checked($Checked) {
 }
 
 if ($SiteOptions) {
-	$SiteOptions = unserialize($SiteOptions);
+	$SiteOptions = unserialize($SiteOptions, ['allowed_classes' => false]);
 } else {
 	$SiteOptions = array();
 }

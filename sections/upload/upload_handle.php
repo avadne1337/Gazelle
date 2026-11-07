@@ -971,7 +971,7 @@ $DB->query("
 	FROM users_main
 	WHERE ID = $LoggedUser[ID]");
 list($Paranoia) = $DB->next_record();
-$Paranoia = unserialize($Paranoia);
+$Paranoia = unserialize($Paranoia, ['allowed_classes' => false]);
 if (!is_array($Paranoia)) {
 	$Paranoia = array();
 }

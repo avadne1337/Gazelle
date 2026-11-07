@@ -36,7 +36,7 @@ class Permissions {
 				WHERE ID = '$PermissionID'");
 			$Permission = G::$DB->next_record(MYSQLI_ASSOC, array('Permissions'));
 			G::$DB->set_query_id($QueryID);
-			$Permission['Permissions'] = unserialize($Permission['Permissions']);
+			$Permission['Permissions'] = unserialize($Permission['Permissions'], ['allowed_classes' => false]);
 			G::$Cache->cache_value("perm_$PermissionID", $Permission, 2592000);
 		}
 		return $Permission;
@@ -66,7 +66,7 @@ class Permissions {
 		}
 
 		if (!empty($CustomPermissions) && !is_array($CustomPermissions)) {
-			$CustomPermissions = unserialize($CustomPermissions);
+			$CustomPermissions = unserialize($CustomPermissions, ['allowed_classes' => false]);
 		}
 
 		$Permissions = self::get_permissions($UserInfo['PermissionID']);
