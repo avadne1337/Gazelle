@@ -1,13 +1,13 @@
 <?php
 $SphQL = new SphinxqlQuery();
-$SphQL->select('id, votes, bounty')->from('requests, requests_delta');
+$SphQL->select('id, votes, bounty')->from('requests');
 
 $SortOrders = array(
 	'votes' => 'votes',
 	'bounty' => 'bounty',
 	'lastvote' => 'lastvote',
 	'filled' => 'timefilled',
-	'year' => 'year',
+	'year' => 'groupyear',
 	'created' => 'timeadded',
 	'random' => false);
 
@@ -295,7 +295,7 @@ if (!empty($_GET['requestor'])) {
 
 if (isset($_GET['year'])) {
 	if (is_number($_GET['year']) || $_GET['year'] === '0') {
-		$SphQL->where('year', $_GET['year']);
+		$SphQL->where('groupyear', $_GET['year']);
 	} else {
 		error(404);
 	}

@@ -9,7 +9,7 @@ class TorrentSearch {
 	 * Map of sort mode => attribute name for ungrouped torrent page
 	 */
 	public static $SortOrders = array(
-		'year' => 'year',
+		'year' => 'groupyear',
 		'time' => 'id',
 		'size' => 'size',
 		'seeders' => 'seeders',
@@ -21,7 +21,7 @@ class TorrentSearch {
 	 * Map of sort mode => attribute name for grouped torrent page
 	 */
 	private static $SortOrdersGrouped = array(
-		'year' => 'year',
+		'year' => 'groupyear',
 		'time' => 'id',
 		'size' => 'maxsize',
 		'seeders' => 'sumseeders',
@@ -242,7 +242,7 @@ class TorrentSearch {
 		}
 		$Offset = ($this->Page - 1) * $ResultLimit;
 		$MaxMatches = $Offset + $ResultLimit;
-		$this->SphQL->from('torrents, delta')
+		$this->SphQL->from('torrents')
 			->limit($Offset, $ResultLimit, $MaxMatches);
 	}
 
@@ -558,17 +558,17 @@ class TorrentSearch {
 		$Years = explode('-', $Term);
 		if (count($Years) === 1 && is_number($Years[0])) {
 			// Exact year
-			$this->SphQL->where('year', $Years[0]);
+			$this->SphQL->where('groupyear', $Years[0]);
 		} elseif (count($Years) === 2) {
 			if (empty($Years[0]) && is_number($Years[1])) {
 				// Range: 0 - 2005
-				$this->SphQL->where_lt('year', $Years[1], true);
+				$this->SphQL->where_lt('groupyear', $Years[1], true);
 			} elseif (empty($Years[1]) && is_number($Years[0])) {
 				// Range: 2005 - 2^32-1
-				$this->SphQL->where_gt('year', $Years[0], true);
+				$this->SphQL->where_gt('groupyear', $Years[0], true);
 			} elseif (is_number($Years[0]) && is_number($Years[1])) {
 				// Range: 2005 - 2009
-				$this->SphQL->where_between('year', array(min($Years), max($Years)));
+				$this->SphQL->where_between('groupyear', array(min($Years), max($Years)));
 			} else {
 				// Invalid input
 				return false;
@@ -685,7 +685,7 @@ class TorrentSearch {
 		}
 		$TorrentCount = count($AllTorrents);
 		$this->SphQLTor = new SphinxqlQuery();
-		$this->SphQLTor->select('id')->from('torrents, delta');
+		$this->SphQLTor->select('id')->from('torrents');
 		foreach ($this->UsedTorrentFields as $Field => $Term) {
 			$this->SphQLTor->where_match($Term, $Field, false);
 		}
