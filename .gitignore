@@ -1,5 +1,6 @@
 config.php
 .env
+docker/nginx/certs/
 release/*
 static/similar
 static/stylespreview
