@@ -329,6 +329,11 @@ class SphinxqlQuery {
 			return false;
 		}
 		$this->Sphinxql->sph_connect();
+		if ($this->Sphinxql->connect_errno) {
+			// Sphinx/Manticore is unreachable. Degrade gracefully (empty result)
+			// instead of querying a dead connection, which fatals on PHP 8.
+			return new SphinxqlResult(false, null, $this->Sphinxql->connect_errno, $this->Sphinxql->connect_error);
+		}
 		$Result = $this->Sphinxql->query($this->QueryString);
 		if ($Result === false) {
 			$Errno = $this->Sphinxql->errno;

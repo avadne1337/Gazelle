@@ -658,7 +658,9 @@ class TorrentSearch {
 	 * Get torrent group info and remove any torrents that don't match
 	 */
 	private function process_results() {
-		if (count($this->SphResults) == 0) {
+		// SphResults is false when Sphinx errors/was unreachable; empty() covers
+		// that and the empty-array case (count(false) fatals on PHP 8).
+		if (empty($this->SphResults)) {
 			return;
 		}
 		$this->Groups = Torrents::get_groups($this->SphResults);
