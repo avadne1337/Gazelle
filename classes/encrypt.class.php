@@ -5,31 +5,35 @@
 
 This class handles encryption and decryption, that's all folks.
 
-Hardened to use authenticated encryption (Encrypt-then-MAC): the ciphertext is
-accompanied by an HMAC-SHA256 that is verified (in constant time) before the
-ciphertext is ever decrypted. This prevents tampering / forgery of the data
-this class protects (the login session cookie) and closes off padding/ciphertext
-manipulation attacks against the unauthenticated CBC mode used previously.
+Uses authenticated encryption (Encrypt-then-MAC): AES-256-CBC for confidentiality
+plus an HMAC-SHA256 that is verified in constant time BEFORE the ciphertext is
+decrypted. Ported from the old mcrypt extension (removed in PHP 7.2/8.0) to
+OpenSSL. The on-disk/cookie format changed with this port, so pre-existing
+session cookies are treated as invalid (users simply log in again).
 
 |*************************************************************************/
 
-if (!extension_loaded('mcrypt')) {
-	die('Mcrypt Extension not loaded.');
+if (!extension_loaded('openssl')) {
+	die('OpenSSL Extension not loaded.');
 }
 
 class CRYPT {
-	// MAC key, derived from ENCKEY so no additional configuration is required
-	// and it stays distinct from the encryption key.
+	const CIPHER = 'aes-256-cbc';
+
+	// Derive a 32-byte AES-256 key and a separate MAC key from ENCKEY.
+	private static function enc_key($Key) {
+		return hash('sha256', 'gazelle-enc-v1'.$Key, true);
+	}
 	private static function mac_key($Key) {
 		return hash_hmac('sha256', 'gazelle-mac-v1', $Key, true);
 	}
 
 	public function encrypt($Str, $Key = ENCKEY) {
-		srand();
-		$Str = str_pad($Str, 32 - strlen($Str));
-		$IVSize = mcrypt_get_iv_size(MCRYPT_RIJNDAEL_128, MCRYPT_MODE_CBC);
-		$IV = mcrypt_create_iv($IVSize, MCRYPT_RAND);
-		$CryptStr = mcrypt_encrypt(MCRYPT_RIJNDAEL_128, $Key, $Str, MCRYPT_MODE_CBC, $IV);
+		$IV = random_bytes(16);
+		$CryptStr = openssl_encrypt($Str, self::CIPHER, self::enc_key($Key), OPENSSL_RAW_DATA, $IV);
+		if ($CryptStr === false) {
+			return '';
+		}
 		$Payload = $IV.$CryptStr;
 		// Encrypt-then-MAC: authenticate the IV and ciphertext together.
 		$MAC = hash_hmac('sha256', $Payload, self::mac_key($Key), true);
@@ -49,12 +53,13 @@ class CRYPT {
 		$Payload = substr($Raw, 32);
 		$Expected = hash_hmac('sha256', $Payload, self::mac_key($Key), true);
 		if (!hash_equals($Expected, $MAC)) {
-			// Tampered, forged, or an old pre-MAC cookie: treat as invalid.
+			// Tampered, forged, or an old pre-port cookie: treat as invalid.
 			return '';
 		}
 		$IV = substr($Payload, 0, 16);
-		$CryptStr = substr($Payload, 16);
-		return trim(mcrypt_decrypt(MCRYPT_RIJNDAEL_128, $Key, $CryptStr, MCRYPT_MODE_CBC, $IV));
+		$CipherText = substr($Payload, 16);
+		$Plain = openssl_decrypt($CipherText, self::CIPHER, self::enc_key($Key), OPENSSL_RAW_DATA, $IV);
+		return $Plain === false ? '' : $Plain;
 	}
 } // class ENCRYPT()
 ?>

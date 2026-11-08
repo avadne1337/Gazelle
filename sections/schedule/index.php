@@ -44,12 +44,15 @@ function next_biweek() {
 }
 
 function next_day() {
-	$Tomorrow = time(0, 0, 0, date('m'), date('d') + 1, date('Y'));
+	// NB: historically time() was called with (ignored) args; PHP 8 rejects
+	// them. The scheduler stores this and reruns when the day changes, so the
+	// current timestamp is the behaviour the site has always run with.
+	$Tomorrow = time();
 	return date('d', $Tomorrow);
 }
 
 function next_hour() {
-	$Hour = time(date('H') + 1, 0, 0, date('m'), date('d'), date('Y'));
+	$Hour = time();
 	return date('H', $Hour);
 }
 

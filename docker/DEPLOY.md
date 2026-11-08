@@ -14,7 +14,7 @@ Running on `claude@192.168.1.111` (Debian 13, arm64) under `/home/claude/gazelle
 | Service    | Image                         | Role                                    |
 |------------|-------------------------------|-----------------------------------------|
 | nginx      | nginx:stable-alpine           | Web server, port 80                     |
-| php        | built from docker/php         | PHP 7.4-fpm + gd, mysqli, mbstring, bcmath, sockets, zip, **mcrypt**, **memcache** |
+| php        | built from docker/php         | PHP 8.3-fpm + gd, mysqli, mbstring, bcmath, sockets, zip, **memcached**, OpenSSL |
 | db         | mariadb:10.11                 | MySQL-compatible DB (strict mode off)   |
 | memcached  | memcached:1.6-alpine          | Cache (TCP 11211, capped at 64 MB)      |
 | ocelot     | built from docker/ocelot      | BitTorrent tracker daemon, port 2710    |
@@ -25,12 +25,35 @@ compose profile, so start the full stack with:
 `docker compose --profile search up -d`
 
 ### Why these choices
-- **PHP 7.4** (not 5.x): newest arm64 PHP image whose core still works with this
-  codebase. `mcrypt` and the old `memcache` extension are added via PECL; `each()`
-  and other deprecations are silenced in `docker/php/zz-gazelle.ini`.
+- **PHP 8.3** (8.3.36, patched against the php2shell RCEs CVE-2026-109618/109619).
+  The codebase was ported off PHP-7-only constructs to run here — see
+  "PHP 8 migration" below.
 - **MariaDB** instead of MySQL 5.7: MySQL 5.7 has no arm64 image.
 - `classes/config.php` is generated (gitignored) with container hostnames
   (`db`, `memcached`, `sphinx`) and random keys/passwords.
+
+## PHP 8 migration
+Originally this 2016 codebase only ran on PHP 7.x. It was ported to PHP 8.3 to get
+onto a supported, php2shell-patched branch. Changes:
+- **Removed language features**: `each()` → `foreach`/`key()`+`current()`+`next()`
+  (12 files); `create_function()` → closures (tags/text classes).
+- **mcrypt** (removed in 7.2) → OpenSSL AES-256-CBC in `encrypt.class.php`, keeping
+  the encrypt-then-HMAC authentication (the cookie format changed, so everyone
+  re-logs in once).
+- **memcache extension** (no PHP 8 build exists) → the **memcached** extension;
+  `CACHE` now `extends Memcached` with the adjusted addServer/set/add/replace
+  signatures. (A SysOp-only `service_stats` page reads `getStats()` in the old
+  format — cosmetic, non-fatal.)
+- **mysqli** now throws by default on 8.1+ → `mysqli_report(MYSQLI_REPORT_OFF)`
+  restored; guarded `warnings()` against a non-live handle.
+- **PHP 8 strictness fatals** fixed as they surfaced: `null` passed to
+  `array_keys()` (cast to `(array)`), division by zero on the empty-DB stats,
+  `fwrite()` to a failed IRC socket, `time()` called with args in the scheduler,
+  and leftover `MYSQL_ASSOC/NUM` constants → `MYSQLI_*`.
+
+Most GET pages and the cron scripts were exercised after the port. Action/POST
+handlers that couldn't be driven without live form submissions may still surface
+the occasional PHP-8 strictness fatal; fix them the same way.
 
 ## Managing it
 ```bash

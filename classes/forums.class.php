@@ -202,7 +202,7 @@ class Forums {
 	 * @return array Array of ForumIDs
 	 */
 	public static function get_permitted_forums() {
-		return (array)array_keys(G::$LoggedUser['CustomForums'], 1);
+		return (array)array_keys((array)G::$LoggedUser['CustomForums'], 1);
 	}
 
 	/**
@@ -210,7 +210,7 @@ class Forums {
 	 * @return array Array of ForumIDs
 	 */
 	public static function get_restricted_forums() {
-		return (array)array_keys(G::$LoggedUser['CustomForums'], 0);
+		return (array)array_keys((array)G::$LoggedUser['CustomForums'], 0);
 	}
 
 	/**

@@ -243,7 +243,7 @@ if (($RequestStats = $Cache->get_value('stats_requests')) === false) {
 }
 
 ?>
-				<li>Requests: <?=number_format($RequestCount)?> (<?=number_format($FilledCount / $RequestCount * 100, 2)?>% filled)</li>
+				<li>Requests: <?=number_format($RequestCount)?> (<?=number_format($RequestCount ? $FilledCount / $RequestCount * 100 : 0, 2)?>% filled)</li>
 <?
 
 if ($SnatchStats = $Cache->get_value('stats_snatches')) {

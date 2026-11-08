@@ -29,7 +29,7 @@ if (!empty($_GET['revisionid'])) { // if they're viewing an old revision
 }
 
 if ($Data) {
-	list($K, list($Name, $Image, $Body, $NumSimilar, $SimilarArray, , , $VanityHouseArtist)) = each($Data);
+	$K = key($Data); list($Name, $Image, $Body, $NumSimilar, $SimilarArray, , , $VanityHouseArtist) = current($Data);
 } else {
 	if ($RevisionID) {
 		$sql = "
@@ -191,7 +191,7 @@ if (!empty($ProducerAlbums)) {
 
 //Custom sorting for releases
 if (!empty($LoggedUser['SortHide'])) {
-	$SortOrder = array_flip(array_keys($LoggedUser['SortHide']));
+	$SortOrder = array_flip(array_keys((array)$LoggedUser['SortHide']));
 } else {
 	$SortOrder = $ReleaseTypes;
 }

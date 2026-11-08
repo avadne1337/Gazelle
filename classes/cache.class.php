@@ -24,11 +24,11 @@ memcached -d -m 8192 -l 10.10.0.1 -t8 -C
 
 |*************************************************************************/
 
-if (!extension_loaded('memcache')) {
-	die('Memcache Extension not loaded.');
+if (!extension_loaded('memcached')) {
+	die('Memcached Extension not loaded.');
 }
 
-class CACHE extends Memcache {
+class CACHE extends Memcached {
 	/**
 	 * Torrent Group cache version
 	 */
@@ -58,9 +58,15 @@ class CACHE extends Memcache {
 	public $InternalCache = true;
 
 	function __construct($Servers) {
+		// Persistent connection pool (the Memcached equivalent of the old
+		// Memcache persistent flag). Only add servers the first time the
+		// persistent pool is created, to avoid duplicates on reuse.
+		parent::__construct('gazelle');
 		$this->Servers = $Servers;
-		foreach ($Servers as $Server) {
-			$this->addServer($Server['host'], $Server['port'], true, $Server['buckets']);
+		if (!count($this->getServerList())) {
+			foreach ($Servers as $Server) {
+				$this->addServer($Server['host'], $Server['port'], $Server['buckets']);
+			}
 		}
 	}
 
@@ -80,7 +86,7 @@ class CACHE extends Memcache {
 		if (empty($Key)) {
 			trigger_error("Cache insert failed for empty key");
 		}
-		if (!$this->set($Key, $Value, 0, $Duration)) {
+		if (!$this->set($Key, $Value, $Duration)) {
 			trigger_error("Cache insert failed for key $Key");
 		}
 		if ($this->InternalCache && array_key_exists($Key, $this->CacheHits)) {
@@ -92,14 +98,14 @@ class CACHE extends Memcache {
 	// Wrapper for Memcache::add, with the zlib option removed and default duration of 30 days
 	public function add_value($Key, $Value, $Duration = 2592000) {
 		$StartTime = microtime(true);
-		$Added = $this->add($Key, $Value, 0, $Duration);
+		$Added = $this->add($Key, $Value, $Duration);
 		$this->Time += (microtime(true) - $StartTime) * 1000;
 		return $Added;
 	}
 
 	public function replace_value($Key, $Value, $Duration = 2592000) {
 		$StartTime = microtime(true);
-		$this->replace($Key, $Value, false, $Duration);
+		$this->replace($Key, $Value, $Duration);
 		if ($this->InternalCache && array_key_exists($Key, $this->CacheHits)) {
 			$this->CacheHits[$Key] = $Value;
 		}
@@ -386,8 +392,10 @@ class CACHE extends Memcache {
 	 */
 	public function server_status() {
 		$Status = array();
+		$Stats = @$this->getStats();
 		foreach ($this->Servers as $Server) {
-			$Status["$Server[host]:$Server[port]"] = $this->getServerStatus($Server['host'], $Server['port']);
+			$Key = $Server['host'].':'.$Server['port'];
+			$Status[$Key] = (isset($Stats[$Key]['pid']) && $Stats[$Key]['pid'] > 0) ? 1 : 0;
 		}
 		return $Status;
 	}

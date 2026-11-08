@@ -164,6 +164,9 @@ class DB_MYSQL {
 	protected $Socket = '';
 
 	function __construct($Database = SQLDB, $User = SQLLOGIN, $Pass = SQLPASS, $Server = SQLHOST, $Port = SQLPORT, $Socket = SQLSOCK) {
+		// PHP 8.1+ makes mysqli throw on errors by default; this code checks
+		// return values and calls halt() itself, so restore the old behaviour.
+		mysqli_report(MYSQLI_REPORT_OFF);
 		$this->Database = $Database;
 		$this->Server = $Server;
 		$this->User = $User;
@@ -398,6 +401,10 @@ class DB_MYSQL {
 	 */
 	function warnings() {
 		$Warnings = array();
+		// PHP 8 throws a TypeError if LinkID isn't a live mysqli handle.
+		if (!($this->LinkID instanceof mysqli)) {
+			return $Warnings;
+		}
 		if (mysqli_warning_count($this->LinkID)) {
 			$e = mysqli_get_warnings($this->LinkID);
 			do {

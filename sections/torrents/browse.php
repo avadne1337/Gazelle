@@ -663,7 +663,7 @@ $ShowGroups = !(!empty($LoggedUser['TorrentGrouping']) && $LoggedUser['TorrentGr
 	} else {
 		// Viewing a type that does not require grouping
 
-		list($TorrentID, $Data) = each($Torrents);
+		$TorrentID = key($Torrents); $Data = current($Torrents); next($Torrents);
 		$DisplayName .= "<a href=\"torrents.php?id=$GroupID&amp;torrentid=$TorrentID#torrent$TorrentID\" class=\"tooltip\" title=\"View torrent\" dir=\"ltr\">$GroupName</a>";
 		if (isset($GroupedCategories[$CategoryID - 1])) {
 			if ($GroupYear) {

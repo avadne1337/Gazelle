@@ -133,7 +133,11 @@ function display_str($Str) {
  * @param string $Raw An IRC protocol snippet to send.
  */
 function send_irc($Raw) {
-	$IRCSocket = fsockopen(SOCKET_LISTEN_ADDRESS, SOCKET_LISTEN_PORT);
+	$IRCSocket = @fsockopen(SOCKET_LISTEN_ADDRESS, SOCKET_LISTEN_PORT);
+	// No bot listening (PHP 8 would fatal on fwrite(false)); skip silently.
+	if ($IRCSocket === false) {
+		return;
+	}
 	$Raw = str_replace(array("\n", "\r"), '', $Raw);
 	fwrite($IRCSocket, $Raw);
 	fclose($IRCSocket);

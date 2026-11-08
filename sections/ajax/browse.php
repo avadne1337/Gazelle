@@ -194,7 +194,7 @@ foreach ($Results as $Key => $GroupID) {
 	} else {
 		// Viewing a type that does not require grouping
 
-		list($TorrentID, $Data) = each($Torrents);
+		$TorrentID = key($Torrents); $Data = current($Torrents); next($Torrents);
 
 		$JsonGroups[] = array(
 			'groupId' => (int)$GroupID,
