@@ -101,11 +101,15 @@ runs `searchd` (SphinxQL on 9306). Two adaptations were needed for Manticore 6:
 Verified end to end: torrent + request searches (incl. year and tag filters)
 execute cleanly against Manticore (0 results on the empty DB, no errors).
 
+## Scheduled maintenance (cron)
+Both of Gazelle's cron jobs run inside the stack, every 15 minutes:
+- **`cron` service** (reuses the `gazelle-php` image): runs `schedule.php` and
+  `peerupdate.php` with the `SCHEDULE_KEY` from `.env`, each under a 600s
+  `timeout` guard. Watch with `docker compose logs -f cron`.
+- **Search reindex**: the `sphinx` entrypoint runs a background loop that does
+  `indexer --all --rotate` every 15 minutes, so newly uploaded torrents become
+  searchable (interval overridable via `REINDEX_INTERVAL`). The index is also
+  rebuilt whenever the `sphinx` container restarts.
+
 ## Remaining follow-ups
-- **Search index refresh**: a cron job should run
-  `docker compose exec sphinx indexer --config /etc/manticoresearch/manticore.conf --all --rotate`
-  periodically so newly uploaded torrents become searchable (the index is also
-  rebuilt whenever the `sphinx` container restarts).
-- **Cron jobs**: `schedule.php` and `peerupdate.php` (see `docs/INSTALL.txt`) are
-  not scheduled.
 - **TLS**: HTTP only. Put a reverse proxy / certs in front if you need HTTPS.

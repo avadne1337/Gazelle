@@ -27,6 +27,7 @@ services:
 
   php:
     build: ./docker/php
+    image: gazelle-php
     restart: unless-stopped
     depends_on:
       db:
@@ -35,6 +36,25 @@ services:
         condition: service_started
     volumes:
       - .:/var/www/gazelle
+
+  # Maintenance cron: runs schedule.php + peerupdate.php on an interval,
+  # reusing the gazelle-php image (code, extensions, DB/cache/tracker access).
+  cron:
+    image: gazelle-php
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      memcached:
+        condition: service_started
+      ocelot:
+        condition: service_started
+    environment:
+      SCHEDULE_KEY: "${SCHEDULE_KEY}"
+    entrypoint: ["/bin/bash", "/docker-cron.sh"]
+    volumes:
+      - .:/var/www/gazelle
+      - ./docker/cron/entrypoint.sh:/docker-cron.sh:ro
 
   nginx:
     image: nginx:stable-alpine

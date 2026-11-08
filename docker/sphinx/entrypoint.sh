@@ -14,4 +14,13 @@ mkdir -p /var/lib/manticore /var/log/manticore /var/run/manticore
 # Build all indexes from the database (ok to fail on first boot if empty).
 indexer --config "$CONF" --all || echo "indexer: initial build reported issues (continuing)"
 
+# Periodic full reindex so newly uploaded torrents become searchable.
+# --rotate signals the running searchd to swap in the rebuilt indexes.
+REINDEX_INTERVAL="${REINDEX_INTERVAL:-900}"
+(
+  while sleep "$REINDEX_INTERVAL"; do
+    indexer --config "$CONF" --all --rotate 2>&1 | grep -iE "collected|ERROR" || true
+  done
+) &
+
 exec searchd --config "$CONF" --nodetach
